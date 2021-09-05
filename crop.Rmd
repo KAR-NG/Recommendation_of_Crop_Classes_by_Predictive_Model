@@ -14,3 +14,56 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+# 1 R PACKAGES LOADED
+
+```{r}
+library(tidyverse)
+library(skimr)
+
+```
+
+# 2 INTRODUCTION
+
+
+
+# 3 DATA PREPARATION
+
+This project uses a public crop dataset in kaggle.com [Link](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset), by Artharva Ingle  
+
+
+## 3.1 Data import
+
+```{r}
+crop <- read.csv("Crop_recom.csv",
+                 fileEncoding = "UTF-8-BOM")
+
+```
+
+## 3.2 Data exploration
+
+```{r}
+skim_without_charts(crop)
+```
+
+
+
+
+## 3.3 Data cleaning and manipulation
+
+
+# 4 Exploratory Data Analysis
+
+
+
+# 5 Model Building 
+
+
+
+# 6 Model for Production
+
+
+# Conclusion
+
+
+
+
