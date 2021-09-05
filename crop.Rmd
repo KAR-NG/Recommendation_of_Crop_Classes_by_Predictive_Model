@@ -128,6 +128,53 @@ summary(crop2)
 
 # 4 Exploratory Data Analysis
 
+## 4.1 Histograms for Numerical Variables
+
+It will be interesting to visualise the distribution of each numerical variables in the data set as a initial examination.
+
+```{r}
+# set up data frame for this section
+
+df4.1 <- crop2 %>% 
+  pivot_longer(c(1:7),
+               values_to = "result",
+               names_to = "variables") %>% 
+  mutate(variables = factor(variables, levels = c("N",
+                                                     "P",
+                                                     "K",
+                                                     "temperature",
+                                                     "humidity",
+                                                     "ph",
+                                                     "rainfall"))) 
+
+levels(df4.1$variables)
+
+# plot
+
+ggplot(df4.1, aes(x = result, fill = variables)) +
+  geom_histogram() +
+  facet_wrap(~variables, scales = "free_x") +
+  labs(x = "Variables",
+       title = "Distribution of Numerical Variables") +
+  theme_bw() +
+  theme(legend.position = "none") 
+
+```
+Insights: 
+
+* Distributions of N, P, and K are quite wide spread which might be due to the presence of different soil types contributing to this dataset. It indicating that they can be counding variables in this dataset.
+
+* The majority of temperatures are spread between 20 - 30oC in this dataset.
+
+* Humidity is quite wide spread with majority fall between 75 - 100%.
+
+* pH and in soil are most slightly acidic with a value around 6.
+
+* 
+
+
+## 4.2 Correlation graphs
+
 
 
 # 5 Model Building 
