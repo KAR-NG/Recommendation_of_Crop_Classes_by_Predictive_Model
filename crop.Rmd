@@ -14,12 +14,13 @@ always_allow_html: yes
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# 1 R PACKAGES LOADED
+# 1 R PACKAGES
 
 ```{r}
 library(tidyverse)
 library(skimr)
 library(kableExtra)
+library(corrplot)
 
 ```
 
@@ -128,7 +129,7 @@ summary(crop2)
 
 # 4 Exploratory Data Analysis
 
-## 4.1 Histograms for Numerical Variables
+## 4.1 Histograms
 
 It will be interesting to visualise the distribution of each numerical variables in the data set as a initial examination.
 
@@ -147,17 +148,18 @@ df4.1 <- crop2 %>%
                                                      "ph",
                                                      "rainfall"))) 
 
-levels(df4.1$variables)
+
 
 # plot
 
 ggplot(df4.1, aes(x = result, fill = variables)) +
-  geom_histogram() +
+  geom_histogram(colour = "white") +
   facet_wrap(~variables, scales = "free_x") +
   labs(x = "Variables",
        title = "Distribution of Numerical Variables") +
   theme_bw() +
-  theme(legend.position = "none") 
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold")) 
 
 ```
 Insights: 
@@ -170,11 +172,74 @@ Insights:
 
 * pH and in soil are most slightly acidic with a value around 6.
 
-* 
+* Rainfalls in this entire dataset are less than 300mm, with majority fall between 50 - 120mm. 
 
 
-## 4.2 Correlation graphs
+## 4.2 Correlogram 
 
+Following correlogram (a plot for correlation) shows that variables are independent from each other except P and K. 
+
+There is a strong relationship between P and K with a correlation of 0.74. It might be an issue during model building however VIF will be checked again in that section to avoid multicollinearity. Though a correlation less than 0.8 between two variables should be indicating that multicollinearity might not exist, but VIF will be computed.  
+
+```{r}
+# convert into matrix, remove the factor "label" 
+
+cor_c <- cor(crop2[, 1:7])
+
+# correlogram
+
+corrplot(cor_c, method = "number", type = "upper")
+
+```
+
+## 4.3 Scatter plot
+
+Plotting the relationship between P and K. 
+
+```{r}
+ggplot(crop2, aes(x = P, y = K, colour = label)) +
+  geom_point(alpha = 0.5) +
+  theme_bw() +
+  labs(title = "Positive Relationship betweem P and K") 
+
+```
+From the graph, there might be a positive relationship between K and P, however the high value of correlation 0.74 might be due to the type to crops and especially the crop groups near 150.
+
+## 4.4 Boxplots
+
+This section uses boxplot to simultaneously compare the 7 numerical variables among different crops stored within the vector, "label". Recall, the 7 numerical variables are:
+
+```{r}
+names(crop2[1:7])
+
+```
+
+
+```{r, fig.width = 8, fig.height=20}
+# set up data frame
+
+df4.3 <- crop2 %>% 
+  pivot_longer(c(1:7),
+               values_to = "result",
+               names_to = "variables") %>% 
+  mutate(variables = factor(variables, levels = c("N",
+                                                     "P",
+                                                     "K",
+                                                     "temperature",
+                                                     "humidity",
+                                                     "ph",
+                                                     "rainfall"))) 
+
+# plot boxplots
+
+ggplot(df4.3, aes(x = label, y = result, colour = label)) +
+  geom_boxplot() +
+  facet_wrap(~variables, scale = "free", ncol =1) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2))
+  
+```
 
 
 # 5 Model Building 

@@ -3,21 +3,22 @@ crop
 Kar
 2021
 
--   [1 R PACKAGES LOADED](#1-r-packages-loaded)
+-   [1 R PACKAGES](#1-r-packages)
 -   [2 INTRODUCTION](#2-introduction)
 -   [3 DATA IMPORT AND CLEANING](#3-data-import-and-cleaning)
     -   [3.1 Data import](#31-data-import)
     -   [3.2 Data exploration](#32-data-exploration)
     -   [3.3 Data manipulation](#33-data-manipulation)
 -   [4 Exploratory Data Analysis](#4-exploratory-data-analysis)
-    -   [4.1 Histograms for Numerical
-        Variables](#41-histograms-for-numerical-variables)
-    -   [4.2 Correlation graphs](#42-correlation-graphs)
+    -   [4.1 Histograms](#41-histograms)
+    -   [4.2 Correlogram](#42-correlogram)
+    -   [4.3 Scatter plot](#43-scatter-plot)
+    -   [4.4 Boxplots](#44-boxplots)
 -   [5 Model Building](#5-model-building)
 -   [6 Model for Production](#6-model-for-production)
 -   [Conclusion](#conclusion)
 
-# 1 R PACKAGES LOADED
+# 1 R PACKAGES
 
 ``` r
 library(tidyverse)
@@ -45,6 +46,12 @@ library(kableExtra)
     ## The following object is masked from 'package:dplyr':
     ## 
     ##     group_rows
+
+``` r
+library(corrplot)
+```
+
+    ## corrplot 0.90 loaded
 
 # 2 INTRODUCTION
 
@@ -686,7 +693,7 @@ summary(crop2)
 
 # 4 Exploratory Data Analysis
 
-## 4.1 Histograms for Numerical Variables
+## 4.1 Histograms
 
 It will be interesting to visualise the distribution of each numerical
 variables in the data set as a initial examination.
@@ -706,22 +713,18 @@ df4.1 <- crop2 %>%
                                                      "ph",
                                                      "rainfall"))) 
 
-levels(df4.1$variables)
-```
 
-    ## [1] "N"           "P"           "K"           "temperature" "humidity"   
-    ## [6] "ph"          "rainfall"
 
-``` r
 # plot
 
 ggplot(df4.1, aes(x = result, fill = variables)) +
-  geom_histogram() +
+  geom_histogram(colour = "white") +
   facet_wrap(~variables, scales = "free_x") +
   labs(x = "Variables",
        title = "Distribution of Numerical Variables") +
   theme_bw() +
-  theme(legend.position = "none") 
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold")) 
 ```
 
     ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
@@ -740,9 +743,87 @@ ggplot(df4.1, aes(x = result, fill = variables)) +
 
 -   pH and in soil are most slightly acidic with a value around 6.
 
--   
+-   Rainfalls in this entire dataset are less than 300mm, with majority
+    fall between 50 - 120mm.
 
-## 4.2 Correlation graphs
+## 4.2 Correlogram
+
+Following correlogram (a plot for correlation) shows that variables are
+independent from each other except P and K.
+
+There is a strong relationship between P and K with a correlation of
+0.74. It might be an issue during model building however VIF will be
+checked again in that section to avoid multicollinearity. Though a
+correlation less than 0.8 between two variables should be indicating
+that multicollinearity might not exist, but VIF will be computed.
+
+``` r
+# convert into matrix, remove the factor "label" 
+
+cor_c <- cor(crop2[, 1:7])
+
+# correlogram
+
+corrplot(cor_c, method = "number", type = "upper")
+```
+
+![](crop_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+## 4.3 Scatter plot
+
+Plotting the relationship between P and K.
+
+``` r
+ggplot(crop2, aes(x = P, y = K, colour = label)) +
+  geom_point(alpha = 0.5) +
+  theme_bw() +
+  labs(title = "Positive Relationship betweem P and K") 
+```
+
+![](crop_files/figure-gfm/unnamed-chunk-12-1.png)<!-- --> From the
+graph, there might be a positive relationship between K and P, however
+the high value of correlation 0.74 might be due to the type to crops and
+especially the crop groups near 150.
+
+## 4.4 Boxplots
+
+This section uses boxplot to simultaneously compare the 7 numerical
+variables among different crops stored within the vector, “label”.
+Recall, the 7 numerical variables are:
+
+``` r
+names(crop2[1:7])
+```
+
+    ## [1] "N"           "P"           "K"           "temperature" "humidity"   
+    ## [6] "ph"          "rainfall"
+
+``` r
+# set up data frame
+
+df4.3 <- crop2 %>% 
+  pivot_longer(c(1:7),
+               values_to = "result",
+               names_to = "variables") %>% 
+  mutate(variables = factor(variables, levels = c("N",
+                                                     "P",
+                                                     "K",
+                                                     "temperature",
+                                                     "humidity",
+                                                     "ph",
+                                                     "rainfall"))) 
+
+# plot boxplots
+
+ggplot(df4.3, aes(x = label, y = result, colour = label)) +
+  geom_boxplot() +
+  facet_wrap(~variables, scale = "free", ncol =1) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2))
+```
+
+![](crop_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 # 5 Model Building
 
