@@ -19,6 +19,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(skimr)
+library(kableExtra)
 
 ```
 
@@ -26,12 +27,13 @@ library(skimr)
 
 
 
-# 3 DATA PREPARATION
+# 3 DATA IMPORT AND CLEANING
 
-This project uses a public crop dataset in kaggle.com [Link](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset), by Artharva Ingle  
-
+This project uses a public crop dataset in kaggle.com [Link](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset), named "Crop Recommendation Dataset" by Artharva Ingle. 
 
 ## 3.1 Data import
+
+The data set is uploaded into R using following code, and the table indicates a successful import. 
 
 ```{r}
 crop <- read.csv("Crop_recom.csv",
@@ -39,16 +41,89 @@ crop <- read.csv("Crop_recom.csv",
 
 ```
 
+The table shows soil nutrients, N, P, and K, as well as temperature, humidity, pH, rainfall, and label. There are no unit for N, P, and K and the values are in term of N-P-K ratio in the soil.
+
+The dataset has following descriptions, adapted from the Kaggle website. 
+
+```{r}
+variables <- c("N", "P", "K", "temperature", "humidity", "ph", "rainfall", "label")
+
+description <- c("N-P-K Ratio of Nitrogen (N) portion in soil",
+                 "N-P-K Ratio of Phosphorus (P) portion in soil",
+                 "N-P-K Ratio of Potassium (K) portion in soil",
+                 "temperature in degree Celsius, oC",
+                 "relative humidity in %",
+                 "Soil pH value",
+                 "rainfall in mm",
+                 "Different crops")
+
+data.frame(variables, description) %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = c("hover", "stripped", "bordered"))
+
+```
+
 ## 3.2 Data exploration
+
+This data has 2200 rows of observations and 8 columns of variables. 
+
+* The "label" is labelled as a character variable.
+
+* And the rest are numerical variables.
+
+* The data set has obviously been cleaned and having no missing values that needs to be managed by looking at the **complete_rate** and the associated column **n_missing** that used to detect missing values in the data frame.
 
 ```{r}
 skim_without_charts(crop)
 ```
 
+Numerical variables either labelled as "int", "num", or "dbl" in R, which the last "dbl" is usually used to labeled floating numbers. 
 
+```{r}
+str(crop)
 
+```
 
-## 3.3 Data cleaning and manipulation
+## 3.3 Data manipulation
+
+**Convert ”label“ to factor**
+
+To quickly examine what are the levels within the variable "label", which is important as it tells the type of crops within this dataset, I will convert the variable "label" from character into factor. It will help examination using R functions and later analysis.
+
+```{r}
+# To protect the original dataset I will hereby create a new object named "crop2" to carry the cleaned data set from this project.
+
+crop2 <- crop %>% 
+  mutate(label = as.factor(label))
+
+```
+
+Following result shows that there are 22 crops in this data set. Each crop has 100 samples, which is excellent as sample sizes are equal and will make statistical comparison fairer. 
+
+```{r}
+summary(crop2$label)
+
+```
+
+**Reduce decimal places**
+
+This step is optional but I decided to make it happened. I will restrict the decimal places of "temperature", "humidity", "pH", and "rainfall" to only one, as this length of decimal places is sufficient.
+
+```{r}
+crop2 <- crop2 %>% 
+  mutate(temperature = round(temperature, 1),
+         humidity = round(humidity, 1),
+         ph = round(ph, 1),
+         rainfall = round(rainfall, 1))
+  
+```
+
+Following shows statistics of all the columns within the dataset such as minimum, maximum, median, and mean. It also shows the number of samples if the column is in factor format, such as the "label" that I have converted it from character format.
+
+```{r}
+summary(crop2)
+
+```
 
 
 # 4 Exploratory Data Analysis
@@ -60,6 +135,8 @@ skim_without_charts(crop)
 
 
 # 6 Model for Production
+
+
 
 
 # Conclusion
