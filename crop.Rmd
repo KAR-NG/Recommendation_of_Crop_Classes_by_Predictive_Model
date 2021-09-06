@@ -253,7 +253,7 @@ The purpose of modeling of this project is to build an effective predictive mode
 This section aims to select relevant and confounding variables during model building. According to the purpose of this project all of these variables are agricultural-wise important and relevant in determining the type of crops to grow in a particular farm.
 
 ```{r}
-crop2
+head(crop2)
 
 ```
 
@@ -281,7 +281,7 @@ test.data <- crop2[-training.set, ]
 
 ## 5.3 Discriminant Analysis  
 
-5 methods of 
+5 methods of Discriminant Analysis
 
 ```{r}
 # Create data parameter 
