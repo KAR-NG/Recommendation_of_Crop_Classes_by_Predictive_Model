@@ -20,8 +20,6 @@ Kar
 
 # 1 R PACKAGES
 
-hihi
-
 ``` r
 library(tidyverse)
 library(skimr)
