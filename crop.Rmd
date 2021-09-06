@@ -1,5 +1,5 @@
 ---
-title: "crop"
+title: "Agriculture Machine Learning (Classification Prediction)"
 author: "Kar"
 date: "2021"
 output: 
@@ -21,6 +21,7 @@ library(tidyverse)
 library(skimr)
 library(kableExtra)
 library(corrplot)
+library(caret)
 
 ```
 
@@ -244,13 +245,63 @@ ggplot(df4.3, aes(x = label, y = result, colour = label)) +
 
 # 5 Model Building 
 
-  
+The purpose of modeling of this project is to build an effective predictive model to suggest the most appropriate crops to grow in a particular farm based on various parameter. 
+
+## 5.1 Variables Selection
+
+This section aims to select relevant and confounding variables during model building. According to the purpose of this project all of these variables are agricultural-wise important and relevant in determining the type of crops to grow in a particular farm.
+
+```{r}
+crop2
+
+```
+
+Therefore, I will keep all of these variables.
+
+
+## 5.2 Train-Test Split
+
+The column "label" is what we are going to predict. 
+
+```{r}
+set.seed(123)
+
+# Create Data Partition
+
+training.set <- crop2$label %>% createDataPartition(p = 0.8, list = F)
+
+# split 80% for train set and 20% for test set
+
+train.data <- crop2[training.set, ]
+
+test.data <- crop2[-training.set, ]
+
+```
+
+## 5.3 Model building
+
+build linear regression 
+
+```{r}
+
+model_lm <- lm(label ~., data = train.data)
+
+```
 
 
 
 
 
 
+
+* train validate test split (train and validate, then use test test to makesure effective in real world)
+* multiple linear regression
+* Lasso regression (because this dataset is going to be so sparse with all these dummy variable, lasso help to normalise that)
+* Random forest (so we have a tree-based model to compare to our LM)
+  * Can use gradient boosted tree
+  * Support vector regression (classification)
+* tune models GridsearchCV
+* test ensembles
 
 
 
