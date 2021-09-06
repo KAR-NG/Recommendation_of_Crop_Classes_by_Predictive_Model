@@ -17,7 +17,7 @@ Kar
 -   [5 Model Building](#5-model-building)
     -   [5.1 Variables Selection](#51-variables-selection)
     -   [5.2 Train-Test Split](#52-train-test-split)
-    -   [5.3 Model building](#53-model-building)
+    -   [5.3 Discriminant Analysis](#53-discriminant-analysis)
 -   [6 Model for Production](#6-model-for-production)
 -   [Conclusion](#conclusion)
 
@@ -29,6 +29,7 @@ library(skimr)
 library(kableExtra)
 library(corrplot)
 library(caret)
+library(MASS)
 ```
 
 # 2 INTRODUCTION
@@ -3042,18 +3043,20 @@ train.data <- crop2[training.set, ]
 test.data <- crop2[-training.set, ]
 ```
 
-## 5.3 Model building
+## 5.3 Discriminant Analysis
 
-build linear regression
+5 methods of
 
 ``` r
-model_lm <- lm(label ~., data = train.data)
+# Create data parameter 
+
+preprocess_parameter <- train.data %>% preProcess(method = c("center", "scale"))
+
+# Data standardisation
+
+train.transformed <- preprocess_parameter %>% predict(train.data)
+test.transformed <- preprocess_parameter %>% predict(test.data)
 ```
-
-    ## Warning in model.response(mf, "numeric"): using type = "numeric" with a factor
-    ## response will be ignored
-
-    ## Warning in Ops.factor(y, z$residuals): '-' not meaningful for factors
 
 -   train validate test split (train and validate, then use test test to
     makesure effective in real world)
