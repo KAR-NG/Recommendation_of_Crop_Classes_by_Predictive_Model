@@ -295,6 +295,7 @@ test.transformed <- preprocess_parameter %>% predict(test.data)
 
 ```
 
+**LDA**
 
 ```{r}
 

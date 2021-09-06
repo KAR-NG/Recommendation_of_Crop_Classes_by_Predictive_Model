@@ -864,6 +864,8 @@ train.transformed <- preprocess_parameter %>% predict(train.data)
 test.transformed <- preprocess_parameter %>% predict(test.data)
 ```
 
+**LDA**
+
 -   train validate test split (train and validate, then use test test to
     makesure effective in real world)
 -   multiple linear regression
