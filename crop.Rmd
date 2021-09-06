@@ -22,6 +22,7 @@ library(skimr)
 library(kableExtra)
 library(corrplot)
 library(caret)
+library(MASS)
 
 ```
 
@@ -278,16 +279,27 @@ test.data <- crop2[-training.set, ]
 
 ```
 
-## 5.3 Model building
+## 5.3 Discriminant Analysis  
 
-build linear regression 
+5 methods of 
 
 ```{r}
+# Create data parameter 
 
-model_lm <- lm(label ~., data = train.data)
+preprocess_parameter <- train.data %>% preProcess(method = c("center", "scale"))
+
+# Data standardisation
+
+train.transformed <- preprocess_parameter %>% predict(train.data)
+test.transformed <- preprocess_parameter %>% predict(test.data)
 
 ```
 
+
+```{r}
+
+
+```
 
 
 
