@@ -440,6 +440,9 @@ model_svmR$bestTune
 ```
 
 
+
+
+
 ### 5.5.3 Non-linear (Polynomial)
 
 ```{r}
@@ -473,8 +476,165 @@ mean(prediction_poly == test.data$label)
 * test ensembles
 
 
+## 5.6 Model - KNN
+
+Applying the K-Nearest Neighbor with caret package that help to search for the optimal k number by argument tuneLength.
 
 ```{r}
+
+set.seed(123)
+
+model_knn <- train(label ~., data = train.data,
+                   method = "knn",
+                   trControl = trainControl("cv", number = 10),
+                   preProcess = c("center", "scale"),
+                   tuneLength = 10)
+
+# plot model
+
+plot(model_knn)
+
+
+```
+
+K value (Neighbors) has a negative relationship with Accuracy. A k-value of 5 is seems to have the highest accuracy.
+
+```{r}
+
+#predictions
+
+prediction_knn <- model_knn %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_knn == test.data$label)
+
+
+```
+
+## 5.7 Model - Decision Tree
+
+
+
+```{r}
+# packages
+
+library(rpart)
+
+# build the model
+
+set.seed(123)
+
+model_tree <- train(label ~., data = train.data,
+                    method = "rpart",
+                    trControl = trainControl("cv", number = 10),
+                    tuneLength = 5)     
+                    # tuneLength to search for the best complexity parameter to prune the tree
+
+plot(model_tree)
+
+```
+
+Complexity parameter (cp) at lower value produce the highest accuracy. R recommending a best cp of 0.0077 to have the highest accuracy rate.
+
+```{r}
+model_tree$bestTune
+
+```
+
+```{r, fig.height=10, fig.width=10}
+par(xpd = NA)
+plot(model_tree$finalModel, main = "Decision Tree")
+text(model_tree$finalModel, srt = 14, cex = 0.8, col = "blue")
+
+```
+
+```{r}
+# predictions
+
+prediction_tree <- model_tree %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_tree == test.data$label)
+
+
+```
+
+## 5.8 Model - Random Forest(s)
+
+In previous decision tree which I grown a tree, and now I grown a forest. It means that I build multiple trees from the data set to achieve a better predictive performance. 
+
+```{r}
+# build the model
+
+set.seed(123)
+
+model_rf <- train(label ~., data = train.data,
+               method = "rf",
+               trControl = trainControl("cv", number = 10))
+
+# predictions
+
+prediction_rf <- model_rf %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_rf == test.data$label)
+
+
+```
+
+Model with 2 mtry (optimal number) of predictors randomly selected and sampled at each split has the highest accuracy rate. It is selected and suggested by R and will be used as the mtry of the final random forest model. 
+
+I tune a couple of hyperparameters in the following code. These tuning may help to avoid overfitting on noisy data set (P. Bruce and Bruce 2017). This step is optional as the previous rainforest algorithm has a 99.3% accuracy. 
+
+```{r}
+
+# build the model
+
+model_rf2 <- list()
+for (nodesize in c(1,2,4,8)){   
+  set.seed(123)
+  model <- train(label ~., data = train.data,
+               method = "rf",
+               trControl = trainControl("cv", number = 10),
+               metric = "Accuracy",
+               nodesize = nodesize)
+  model.name <- toString(nodesize)
+  model_rf2[[model.name]] <- model
+}
+
+# compare results
+
+resamples(model_rf2) %>% summary(metric = "Accuracy")
+
+
+```
+
+4 different nodesize (1, 2, 4, 8) produced a 99% of accuracy. Though there are minor differences, node 8 has the highest median accuracy of 99.7% base on cross validations. Next, I will use it to predict the test dataset.
+
+```{r}
+
+# prediction
+
+prediction_rf2 <- model_rf2 %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_rf2$`8` == test.data$label)
+
+
+```
+This tuned random forest model has 99.1% accuracy and is slightly lower than its untuned verson computed previous at 99.3%.
+
+
+
+
+
+```{r}
+
+# df
 
 p.summary <- data.frame(
 LDA = mean(predict_lda$class == test.transformed$label),
@@ -485,13 +645,17 @@ RDA = mean(predict_rda$class == test.transformed$label),
 NaiveBayer = mean(prediction_nb$class == test.data$label),
 SVM_linear = mean(predictions_svml == test.data$label),
 SVM_svmR = mean(prediction_svmR == test.data$label),
-SVM_Poly = mean(prediction_poly == test.data$label)
+SVM_Poly = mean(prediction_poly == test.data$label),
+knn = mean(prediction_knn == test.data$label),
+decision_tree = mean(prediction_tree == test.data$label),
+RandomForest = mean(prediction_rf == test.data$label),
+RandomForest_tuned = mean(prediction_rf2$`8` == test.data$label)
 )
 
 # pivot longer
 
 p.summary %>% 
-  pivot_longer(c(1:9),
+  pivot_longer(c(1:13),
                names_to = "Model",
                values_to = "Accuracy") %>% 
   mutate(Accuracy = round(Accuracy*100, 1)) %>% 

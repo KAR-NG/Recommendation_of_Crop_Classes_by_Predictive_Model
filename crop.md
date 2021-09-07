@@ -26,6 +26,9 @@ Kar
         -   [5.5.1 Linear SVM](#551-linear-svm)
         -   [5.5.2 Non-linear SVM (Radial)](#552-non-linear-svm-radial)
         -   [5.5.3 Non-linear (Polynomial)](#553-non-linear-polynomial)
+    -   [5.6 Model - KNN](#56-model---knn)
+    -   [5.7 Model - Decision Tree](#57-model---decision-tree)
+    -   [5.8 Model - Random Forest(s)](#58-model---random-forests)
 -   [6 Model for Production](#6-model-for-production)
 -   [Conclusion](#conclusion)
 
@@ -1067,7 +1070,187 @@ mean(prediction_poly == test.data$label)
 -   tune models GridsearchCV
 -   test ensembles
 
+## 5.6 Model - KNN
+
+Applying the K-Nearest Neighbor with caret package that help to search
+for the optimal k number by argument tuneLength.
+
 ``` r
+set.seed(123)
+
+model_knn <- train(label ~., data = train.data,
+                   method = "knn",
+                   trControl = trainControl("cv", number = 10),
+                   preProcess = c("center", "scale"),
+                   tuneLength = 10)
+
+# plot model
+
+plot(model_knn)
+```
+
+![](crop_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+
+K value (Neighbors) has a negative relationship with Accuracy. A k-value
+of 5 is seems to have the highest accuracy.
+
+``` r
+#predictions
+
+prediction_knn <- model_knn %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_knn == test.data$label)
+```
+
+    ## [1] 0.9727273
+
+## 5.7 Model - Decision Tree
+
+``` r
+# packages
+
+library(rpart)
+
+# build the model
+
+set.seed(123)
+
+model_tree <- train(label ~., data = train.data,
+                    method = "rpart",
+                    trControl = trainControl("cv", number = 10),
+                    tuneLength = 5)     
+                    # tuneLength to search for the best complexity parameter to prune the tree
+
+plot(model_tree)
+```
+
+![](crop_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+
+Complexity parameter (cp) at lower value produce the highest accuracy. R
+recommending a best cp of 0.0077 to have the highest accuracy rate.
+
+``` r
+model_tree$bestTune
+```
+
+    ##            cp
+    ## 1 0.007738095
+
+``` r
+par(xpd = NA)
+plot(model_tree$finalModel, main = "Decision Tree")
+text(model_tree$finalModel, srt = 14, cex = 0.8, col = "blue")
+```
+
+![](crop_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+
+``` r
+# predictions
+
+prediction_tree <- model_tree %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_tree == test.data$label)
+```
+
+    ## [1] 0.9545455
+
+## 5.8 Model - Random Forest(s)
+
+In previous decision tree which I grown a tree, and now I grown a
+forest. It means that I build multiple trees from the data set to
+achieve a better predictive performance.
+
+``` r
+# build the model
+
+set.seed(123)
+
+model_rf <- train(label ~., data = train.data,
+               method = "rf",
+               trControl = trainControl("cv", number = 10))
+
+# predictions
+
+prediction_rf <- model_rf %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_rf == test.data$label)
+```
+
+    ## [1] 0.9931818
+
+Model with 2 mtry (optimal number) of predictors randomly selected and
+sampled at each split has the highest accuracy rate. It is selected and
+suggested by R and will be used as the mtry of the final random forest
+model.
+
+I tune a couple of hyperparameters in the following code. These tuning
+may help to avoid overfitting on noisy data set (P. Bruce and Bruce
+2017). This step is optional as the previous rainforest algorithm has a
+99.3% accuracy.
+
+``` r
+# build the model
+
+model_rf2 <- list()
+for (nodesize in c(1,2,4,8)){   
+  set.seed(123)
+  model <- train(label ~., data = train.data,
+               method = "rf",
+               trControl = trainControl("cv", number = 10),
+               metric = "Accuracy",
+               nodesize = nodesize)
+  model.name <- toString(nodesize)
+  model_rf2[[model.name]] <- model
+}
+
+# compare results
+
+resamples(model_rf2) %>% summary(metric = "Accuracy")
+```
+
+    ## 
+    ## Call:
+    ## summary.resamples(object = ., metric = "Accuracy")
+    ## 
+    ## Models: 1, 2, 4, 8 
+    ## Number of resamples: 10 
+    ## 
+    ## Accuracy 
+    ##        Min.   1st Qu.    Median      Mean   3rd Qu. Max. NA's
+    ## 1 0.9829545 0.9900568 0.9943182 0.9943182 1.0000000    1    0
+    ## 2 0.9886364 0.9900568 0.9943182 0.9943182 0.9985795    1    0
+    ## 4 0.9886364 0.9900568 0.9943182 0.9948864 1.0000000    1    0
+    ## 8 0.9829545 0.9900568 0.9971591 0.9948864 1.0000000    1    0
+
+4 different nodesize (1, 2, 4, 8) produced a 99% of accuracy. Though
+there are minor differences, node 8 has the highest median accuracy of
+99.7% base on cross validations. Next, I will use it to predict the test
+dataset.
+
+``` r
+# prediction
+
+prediction_rf2 <- model_rf2 %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_rf2$`8` == test.data$label)
+```
+
+    ## [1] 0.9909091
+
+This tuned random forest model has 99.1% accuracy and is slightly lower
+than its untuned verson computed previous at 99.3%.
+
+``` r
+# df
+
 p.summary <- data.frame(
 LDA = mean(predict_lda$class == test.transformed$label),
 QDA = mean(predict_qda$class == test.transformed$label),
@@ -1077,13 +1260,17 @@ RDA = mean(predict_rda$class == test.transformed$label),
 NaiveBayer = mean(prediction_nb$class == test.data$label),
 SVM_linear = mean(predictions_svml == test.data$label),
 SVM_svmR = mean(prediction_svmR == test.data$label),
-SVM_Poly = mean(prediction_poly == test.data$label)
+SVM_Poly = mean(prediction_poly == test.data$label),
+knn = mean(prediction_knn == test.data$label),
+decision_tree = mean(prediction_tree == test.data$label),
+RandomForest = mean(prediction_rf == test.data$label),
+RandomForest_tuned = mean(prediction_rf2$`8` == test.data$label)
 )
 
 # pivot longer
 
 p.summary %>% 
-  pivot_longer(c(1:9),
+  pivot_longer(c(1:13),
                names_to = "Model",
                values_to = "Accuracy") %>% 
   mutate(Accuracy = round(Accuracy*100, 1)) %>% 
@@ -1091,18 +1278,22 @@ p.summary %>%
   mutate(Accuracy = paste0(Accuracy, "%"))
 ```
 
-    ## # A tibble: 9 x 2
-    ##   Model      Accuracy
-    ##   <chr>      <chr>   
-    ## 1 NaiveBayer 99.5%   
-    ## 2 QDA        99.3%   
-    ## 3 RDA        99.3%   
-    ## 4 SVM_svmR   98.6%   
-    ## 5 SVM_Poly   98.4%   
-    ## 6 MDA        98.2%   
-    ## 7 SVM_linear 98.2%   
-    ## 8 LDA        97.3%   
-    ## 9 FDA        97.3%
+    ## # A tibble: 13 x 2
+    ##    Model              Accuracy
+    ##    <chr>              <chr>   
+    ##  1 NaiveBayer         99.5%   
+    ##  2 QDA                99.3%   
+    ##  3 RDA                99.3%   
+    ##  4 RandomForest       99.3%   
+    ##  5 RandomForest_tuned 99.1%   
+    ##  6 SVM_svmR           98.6%   
+    ##  7 SVM_Poly           98.4%   
+    ##  8 MDA                98.2%   
+    ##  9 SVM_linear         98.2%   
+    ## 10 LDA                97.3%   
+    ## 11 FDA                97.3%   
+    ## 12 knn                97.3%   
+    ## 13 decision_tree      95.5%
 
 # 6 Model for Production
 
