@@ -259,10 +259,9 @@ head(crop2)
 
 Therefore, I will keep all of these variables.
 
-
 ## 5.2 Train-Test Split
 
-The column "label" is what we are going to predict. 
+The column "label" is what we are going to predict. It is a classification problem. 
 
 ```{r}
 set.seed(123)
@@ -279,9 +278,9 @@ test.data <- crop2[-training.set, ]
 
 ```
 
-## 5.3 Discriminant Analysis  
+## 5.3 Model - Discriminant Analysis  
 
-5 methods of Discriminant Analysis
+5 methods of Discriminant Analysis are carried out, they are linear, quadratic, mixture, flexible and regularised discriminant analysis. 
 
 ```{r}
 # Create data parameter 
@@ -295,21 +294,178 @@ test.transformed <- preprocess_parameter %>% predict(test.data)
 
 ```
 
-**LDA**
 
 ```{r}
+# build lda model
+model_lda <- lda(label ~., data = train.transformed)
+model_qda <- qda(label ~., data = train.transformed)
+model_mda <- mda::mda(label ~., data = train.transformed)
+model_fda <- mda::fda(label ~., data = train.transformed)
+model_rda <- klaR::rda(label ~., data = train.transformed)
 
+```
+
+```{r}
+predict_lda <- model_lda %>% predict(test.transformed)
+predict_qda <- model_qda %>% predict(test.transformed)
+predict_mda <- model_mda %>% predict(test.transformed)
+predict_fda <- model_fda %>% predict(test.transformed)
+predict_rda <- model_rda %>% predict(test.transformed)
+
+```
+
+```{r}
+data.frame(
+lda_accuracy = mean(predict_lda$class == test.transformed$label),
+qda_accuracy = mean(predict_qda$class == test.transformed$label),
+mda_accuracy = mean(predict_mda == test.transformed$label),
+fda_accuracy = mean(predict_fda == test.transformed$label),
+rda_accuracy = mean(predict_rda$class == test.transformed$label)
+)
+
+```
+
+All 5 methods of discriminant models produce great accuracy results.
+
+To be conservative, flexible discriminant analysis (fda) would be selected as the best model as it do not assume normality of data and equal variances among classes, and it has an accuracy of 97%.
+
+QDA suitable to large data set and RDA is commonly used for large multivariate dataset with the present of multicollinearity. The LDA is known for its restriction with assumptions in the normality of data and equal variance among classes, whereas MDA is slightly less restrictive model compared to LDA. 
+
+
+
+## 5.4 Model - Naive Bayes Classifier
+
+```{r, warning=FALSE}
+
+# build the model
+
+model_nb <- klaR::NaiveBayes(label ~., data = train.data)
+
+# predictions
+
+prediction_nb <- model_nb %>% predict(test.data) 
+
+# model accuracy
+
+mean(prediction_nb$class == test.data$label)
 
 ```
 
 
+```{r, warning=FALSE}
+
+model_nbc <- train(label ~., data = train.data,
+                   method = "nb",
+                   trControl = trainControl("cv", number = 10))
+
+# predictions
+
+prediction_nbc <- model_nbc %>% predict(test.data)
+
+# model accuracy
+
+mean(prediction_nbc == test.data$label)
 
 
+```
+## 5.5 Model - Suppor Vector Method (SVM)
+
+This model is sometimes referred as support vector regression (SVR). This method identify the optimal decision boundary when it seperates the points from different classe and then use the final drawn boundary for prediction.  
+
+I will perform 3 types of SVR here and examine which SVR model produces the best predictions based on test data set. The 3 SVR models are linear, non-linear (Radial Kernal), and non-linear (polynomial kernal). 
+
+### 5.5.1 Linear SVM
+
+Applying following codes from caret packages, it helps to determine the best Cost (C) which is the tuning parameter of SVM. The higher the c, the better the accuracy result of particular model. 
+
+```{r, warning=FALSE}
+
+set.seed(123)
+
+model_svml <- train(label ~., data = train.data,
+                    method = "svmLinear",
+                    trControl = trainControl("cv", number = 10),
+                    tuneGrid = expand.grid(C = seq(0, 2, length = 20)),
+                    preProcess = c("center", "scale"))
 
 
-* train validate test split (train and validate, then use test test to makesure effective in real world)
-* multiple linear regression
-* Lasso regression (because this dataset is going to be so sparse with all these dummy variable, lasso help to normalise that)
+# predictions
+
+predictions_svml <- model_svml %>% predict(test.data)
+
+# accuracy
+
+mean(predictions_svml == test.data$label)
+
+plot(model_svml)
+
+```
+
+```{r}
+
+model_svml$bestTune
+
+
+```
+
+### 5.5.2 Non-linear SVM (Radial)
+
+For non-linear SVM, I will use either radial kernal or polynomial kernal. The R package will find the best values for modelt 
+
+```{r}
+
+# build the model
+
+set.seed(123)
+
+model_svmR <- train(label ~., data = train.data,
+                    method = "svmRadial",
+                    trControl = trainControl("cv", number = 10),
+                    tuneLength = 10,
+                    preProcess = c("center", "scale"))
+
+# predictions
+
+prediction_svmR <- model_svmR %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_svmR == test.data$label)
+
+
+```
+```{r}
+model_svmR$bestTune
+
+```
+
+
+### 5.5.3 Non-linear (Polynomial)
+
+```{r}
+# build the model
+
+set.seed(123)
+
+# This model takes quite some time to run
+model_poly <- train(label ~., data = train.data,
+                    method = "svmPoly",
+                    trControl = trainControl("cv", number = 10),
+                    tuneLength = 4,
+                    preProcess = c("center", "scale")
+                    )
+
+# predictions 
+
+prediction_poly <- model_poly %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_poly == test.data$label)
+
+```
+
+
 * Random forest (so we have a tree-based model to compare to our LM)
   * Can use gradient boosted tree
   * Support vector regression (classification)
@@ -318,7 +474,32 @@ test.transformed <- preprocess_parameter %>% predict(test.data)
 
 
 
+```{r}
 
+p.summary <- data.frame(
+LDA = mean(predict_lda$class == test.transformed$label),
+QDA = mean(predict_qda$class == test.transformed$label),
+MDA = mean(predict_mda == test.transformed$label),
+FDA = mean(predict_fda == test.transformed$label),
+RDA = mean(predict_rda$class == test.transformed$label),
+NaiveBayer = mean(prediction_nb$class == test.data$label),
+SVM_linear = mean(predictions_svml == test.data$label),
+SVM_svmR = mean(prediction_svmR == test.data$label),
+SVM_Poly = mean(prediction_poly == test.data$label)
+)
+
+# pivot longer
+
+p.summary %>% 
+  pivot_longer(c(1:9),
+               names_to = "Model",
+               values_to = "Accuracy") %>% 
+  mutate(Accuracy = round(Accuracy*100, 1)) %>% 
+  arrange(desc(Accuracy)) %>% 
+  mutate(Accuracy = paste0(Accuracy, "%"))
+
+
+```
 
 
 
