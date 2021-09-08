@@ -561,33 +561,11 @@ mean(prediction_tree == test.data$label)
 
 ```
 
-## 5.8 Model - Random Forest(s)
+## 5.8 Model - Random Forest
 
-In previous decision tree which I grown a tree, and now I grown a forest. It means that I build multiple trees from the data set to achieve a better predictive performance. 
+In previous decision tree which I grown a tree, and now I grow a forest. It means that I build multiple trees from the data set to achieve a better predictive performance. 
 
-```{r}
-# build the model
-
-set.seed(123)
-
-model_rf <- train(label ~., data = train.data,
-               method = "rf",
-               trControl = trainControl("cv", number = 10))
-
-# predictions
-
-prediction_rf <- model_rf %>% predict(test.data)
-
-# accuracy
-
-mean(prediction_rf == test.data$label)
-
-
-```
-
-Model with 2 mtry (optimal number) of predictors randomly selected and sampled at each split has the highest accuracy rate. It is selected and suggested by R and will be used as the mtry of the final random forest model. 
-
-I tune a couple of hyperparameters in the following code. These tuning may help to avoid overfitting on noisy data set (P. Bruce and Bruce 2017). This step is optional as the previous rainforest algorithm has a 99.3% accuracy. 
+I tune a couple of hyperparameters in the following codes. These tunings may help to avoid overfitting on noisy data set (P. Bruce and Bruce 2017). 
 
 ```{r}
 
@@ -605,14 +583,46 @@ for (nodesize in c(1,2,4,8)){
   model_rf2[[model.name]] <- model
 }
 
+model_rf <- model_rf2
+
 # compare results
 
-resamples(model_rf2) %>% summary(metric = "Accuracy")
+resamples(model_rf) %>% summary(metric = "Accuracy")
 
 
 ```
 
-4 different nodesize (1, 2, 4, 8) produced a 99% of accuracy. Though there are minor differences, node 8 has the highest median accuracy of 99.7% base on cross validations. Next, I will use it to predict the test dataset.
+4 different nodesize (1, 2, 4, 8) produced a 99% of accuracy. Nodesize is the minimum of terminal nodes. The differences in term of accuracy between nodesize were really small, node 8 has the highest median accuracy of 99.7% base on cross validations. 
+
+I will pick nodesize at 8 to be the most appropriate nodesize for this random forest modeling.
+
+Following statistics of the final model of this random forest computation indicating that:
+
+* 500 trees are trained (default).      
+* The optimal number of variables randomly sampled at each split is 2, known as mtry and bootstrap sampling. The optimal value is selected by *caret* automation.    
+* OBB rate is extremely small at only 0.51%.  
+
+```{r}
+model_rf$`8`$finalModel
+
+```
+
+**Variable importance** 
+
+Across all of the trees within the random forest algorithm, rainfall, humidity, and K are the three most important variables. 
+
+```{r}
+Gini.table <- randomForest::importance(model_rf$`8`$finalModel)
+Gini.table <- Gini.table %>% as.data.frame()
+Gini.table %>% 
+  arrange(desc(MeanDecreaseGini))
+
+```
+
+```{r}
+varImpPlot(model_rf$`8`$finalModel)
+
+```
 
 ```{r}
 
@@ -627,6 +637,17 @@ mean(prediction_rf2$`8` == test.data$label)
 
 ```
 This tuned random forest model has 99.1% accuracy and is slightly lower than its untuned verson computed previous at 99.3%.
+
+**variable important**
+
+```{r}
+library(randomForest)
+importance(model_rf2$`8`$finalModel)
+
+```
+
+
+
 
 
 
