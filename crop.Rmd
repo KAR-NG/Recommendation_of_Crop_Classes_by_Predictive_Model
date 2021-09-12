@@ -12,7 +12,7 @@ always_allow_html: yes
 
 ***
 
-![](C:\Users\karho\Desktop\R\github\crop\pic6_thumbnail.jpg)
+![](https://github.com/KAR-NG/crop/blob/master/pic6_thumbnail.jpg)
 
 ***
 
@@ -36,7 +36,7 @@ Machine learning techniques were applied in this project and 13 models were buil
 
 *Highlight*
 
-![](C:\Users\karho\Desktop\R\github\crop\pic5_combine.JPG)
+![](https://raw.githubusercontent.com/KAR-NG/crop/master/pic5_combine.JPG)
 
 
 
@@ -874,9 +874,9 @@ This app allows me to freely make crop recommendation for any request without mu
 Jenny
 ```
 
-![](C:\Users\karho\Desktop\R\github\crop\pic1_api1.JPG)
+![](https://raw.githubusercontent.com/KAR-NG/crop/master/pic1_api1.JPG)
 
-![](C:\Users\karho\Desktop\R\github\crop\pic1_api2.JPG)
+![](https://raw.githubusercontent.com/KAR-NG/crop/master/pic2_api2.JPG)
 
 
 * Banana is recommended the best crop for Jenny.
@@ -886,14 +886,11 @@ Jenny
 ```{r}
 Mike
 ```
-![](C:\Users\karho\Desktop\R\github\crop\pic3_api3.JPG)
+![](https://raw.githubusercontent.com/KAR-NG/crop/master/pic3_api3.JPG)
 
-![](C:\Users\karho\Desktop\R\github\crop\pic3_api4.JPG)
+![](https://raw.githubusercontent.com/KAR-NG/crop/master/pic4_api4.JPG)
 
 
-```{r}
-test.data
-```
 * Rice is recommended the best crop for Mike.
 
 
