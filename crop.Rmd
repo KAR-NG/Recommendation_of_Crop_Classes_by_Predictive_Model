@@ -1,6 +1,6 @@
 ---
-title: "Agriculture Machine Learning (Classification Prediction)"
-author: "Kar"
+title: "Recommendation of Crop Classes by Predictive Model"
+author: "Kar Ng"
 date: "2021"
 output: 
   github_document:
@@ -10,33 +10,59 @@ always_allow_html: yes
 
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+***
+
+![](C:\Users\karho\Desktop\R\github\crop\pic6_thumbnail.jpg)
+
+***
+
+```{r echo=FALSE}
+bytes <- file.size("crop.Rmd")
+words <- bytes/10
+minutes <- words/200
 ```
 
-# 1 R PACKAGES
+Reading time: `r round(minutes)` minutes
+
+
+
+# 1. SUMMARY
+
+This project uses a dataset from *Kaggle.com* that shared publicly with a machine learning task. This dataset was collected in India. We were asked to build a predictive model to help farmers to make informed decision. 
+
+We need to build a model that is able to recommend the most suitable crop to grow in a particular farm based on various parameters specified in the dataset. These parameters include the levels of nitrogen, phosphorus, and potassium, as well as temperature, humidity, pH, and rainfall level. There are 22 agricultural crops recommendable in the dataset. 
+
+Machine learning techniques were applied in this project and 13 models were built and compared. Naive Bayes classifier and boosted random forest were the two best models in predicting the test dataset, both at the same accuracy of 99.55%. Confusion matrix was applied, sensitivity and specificity were excellent at a level of above 90% in all crop data points. The model was put into production with development of a API app to ease application of these models. 
+
+*Highlight*
+
+![](C:\Users\karho\Desktop\R\github\crop\pic5_combine.JPG)
+
+
+
+
+# 2 R PACKAGES
 
 ```{r, message=FALSE, warning=FALSE}
+
 library(tidyverse)
 library(skimr)
 library(kableExtra)
 library(corrplot)
 library(caret)
 library(MASS)
+library(randomForest)
+library(xgboost)
+library(rpart)
 
 ```
 
-# 2 INTRODUCTION
 
+# 4 DATA IMPORT AND CLEANING
 
+This project uses a public dataset in kaggle.com [Link](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset), called "Crop Recommendation Dataset" by *Artharva Ingle*. 
 
-# 3 DATA IMPORT AND CLEANING
-
-This project uses a public crop dataset in kaggle.com [Link](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset), named "Crop Recommendation Dataset" by Artharva Ingle. 
-
-## 3.1 Data import
-
-The data set is uploaded into R using following code, and the table indicates a successful import. 
+## 4.1 Data import
 
 ```{r}
 crop <- read.csv("Crop_recom.csv",
@@ -44,14 +70,13 @@ crop <- read.csv("Crop_recom.csv",
 
 ```
 
-The table shows soil nutrients, N, P, and K, as well as temperature, humidity, pH, rainfall, and label. There are no unit for N, P, and K and the values are in term of N-P-K ratio in the soil.
 
-The dataset has following descriptions, adapted from the Kaggle website. 
+The dataset has following descriptions, adapted from the *Kaggle* website. 
 
 ```{r}
-variables <- c("N", "P", "K", "temperature", "humidity", "ph", "rainfall", "label")
+Variables <- c("N", "P", "K", "temperature", "humidity", "ph", "rainfall", "label")
 
-description <- c("N-P-K Ratio of Nitrogen (N) portion in soil",
+Description <- c("N-P-K Ratio of Nitrogen (N) portion in soil",
                  "N-P-K Ratio of Phosphorus (P) portion in soil",
                  "N-P-K Ratio of Potassium (K) portion in soil",
                  "temperature in degree Celsius, oC",
@@ -60,48 +85,48 @@ description <- c("N-P-K Ratio of Nitrogen (N) portion in soil",
                  "rainfall in mm",
                  "Different crops")
 
-data.frame(variables, description) %>% 
+data.frame(Variables, Description) %>% 
   kbl() %>% 
   kable_styling(bootstrap_options = c("hover", "stripped", "bordered"))
 
 ```
 
-## 3.2 Data exploration
+## 4.2 Data exploration
 
-This data has 2200 rows of observations and 8 columns of variables. 
+This dataset has 2200 rows of observations and 8 columns of variables. 
 
-* The "label" is labelled as a character variable.
+* The "label" is categorised as a character variable by R.
 
 * And the rest are numerical variables.
 
-* The data set has obviously been cleaned and having no missing values that needs to be managed by looking at the **complete_rate** and the associated column **n_missing** that used to detect missing values in the data frame.
+* The dataset is clean and having no missing values. It can be assess by examining the **complete_rate** and the associated column **n_missing** that used to detect missing values in the dataset.
 
 ```{r}
 skim_without_charts(crop)
 ```
 
-Numerical variables either labelled as "int", "num", or "dbl" in R, which the last "dbl" is usually used to labeled floating numbers. 
+Numerical variables are either labelled as "int", "num", or "dbl" by R. The "dbl" stands for "double", which is usually used to label numbers with decimal places. 
 
 ```{r}
 str(crop)
 
 ```
 
-## 3.3 Data manipulation
+## 4.3 Data manipulation
 
-**Convert ”label“ to factor**
+**Convert the variable 'label' from character into factor**
 
-To quickly examine what are the levels within the variable "label", which is important as it tells the type of crops within this dataset, I will convert the variable "label" from character into factor. It will help examination using R functions and later analysis.
+It will help to quickly examine what are the levels within the variable "label" using R function.
 
 ```{r}
-# To protect the original dataset I will hereby create a new object named "crop2" to carry the cleaned data set from this project.
+# To protect the original dataset, I create a new object named "crop2" to carry the cleaned data set 
 
 crop2 <- crop %>% 
   mutate(label = as.factor(label))
 
 ```
 
-Following result shows that there are 22 crops in this data set. Each crop has 100 samples, which is excellent as sample sizes are equal and will make statistical comparison fairer. 
+Following result shows that there are 22 crops in this data set. Each crop has 100 samples, which is excellent as sample sizes are equal and will make statistical comparison fairer。 
 
 ```{r}
 summary(crop2$label)
@@ -110,7 +135,7 @@ summary(crop2$label)
 
 **Reduce decimal places**
 
-This step is optional but I decided to make it happened. I will restrict the decimal places of "temperature", "humidity", "pH", and "rainfall" to only one, as this length of decimal places is sufficient.
+This step is optional but I will make it happen. I will restrict the decimal places of "temperature", "humidity", "pH", and "rainfall" to only one, as this length of decimal places is sufficient in the case of the project.
 
 ```{r}
 crop2 <- crop2 %>% 
@@ -121,19 +146,18 @@ crop2 <- crop2 %>%
   
 ```
 
-Following shows statistics of all the columns within the dataset such as minimum, maximum, median, and mean. It also shows the number of samples if the column is in factor format, such as the "label" that I have converted it from character format.
+Following summary shows the general statistics of all the variables, such as minimum, maximum, median, and mean. It also shows the number of samples if the variables are categorical and is in factor format, such as the "label" that I converted in the previous section from character into factor.
 
 ```{r}
 summary(crop2)
 
 ```
 
+# 5 EXPLORATORY DATA ANALYSIS
 
-# 4 Exploratory Data Analysis
+## 5.1 Histograms
 
-## 4.1 Histograms
-
-It will be interesting to visualise the distribution of each numerical variables in the data set as a initial examination.
+It will be interesting to visualise the distribution of each numerical variables in the data set as an initial visual examination.
 
 ```{r}
 # set up data frame for this section
@@ -166,9 +190,9 @@ ggplot(df4.1, aes(x = result, fill = variables)) +
 ```
 Insights: 
 
-* Distributions of N, P, and K are quite wide spread which might be due to the presence of different soil types contributing to this dataset. It indicating that they can be counding variables in this dataset.
+* Distributions of N, P, and K are quite wide spread。
 
-* The majority of temperatures are spread between 20 - 30oC in this dataset.
+* The temperatures are mostly between 20 - 30oC。
 
 * Humidity is quite wide spread with majority fall between 75 - 100%.
 
@@ -177,11 +201,9 @@ Insights:
 * Rainfalls in this entire dataset are less than 300mm, with majority fall between 50 - 120mm. 
 
 
-## 4.2 Correlogram 
+## 5.2 Correlogram 
 
-Following correlogram (a plot for correlation) shows that variables are independent from each other except P and K. 
-
-There is a strong relationship between P and K with a correlation of 0.74. It might be an issue during model building however VIF will be checked again in that section to avoid multicollinearity. Though a correlation less than 0.8 between two variables should be indicating that multicollinearity might not exist, but VIF will be computed.  
+Following correlogram (a plot for correlation) shows that variables are independent from each other except the correlation between P and K. here is a strong relationship between P and K with a correlation of 0.74.
 
 ```{r}
 # convert into matrix, remove the factor "label" 
@@ -194,9 +216,12 @@ corrplot(cor_c, method = "number", type = "upper")
 
 ```
 
-## 4.3 Scatter plot
+However, the rule of thumb is that if correlation is greater than 0.8 between two independent variables, then multicollinearity would exist. Therefore, it is safe to use P and K together during modeling. 
 
-Plotting the relationship between P and K. 
+
+## 5.3 Scatter plot
+
+It might be intersting to see how are P and K relate to each other. 
 
 ```{r}
 ggplot(crop2, aes(x = P, y = K, colour = label)) +
@@ -205,20 +230,17 @@ ggplot(crop2, aes(x = P, y = K, colour = label)) +
   labs(title = "Positive Relationship betweem P and K") 
 
 ```
-From the graph, there might be a positive relationship between K and P, however the high value of correlation 0.74 might be due to the type to crops and especially the crop groups near 150.
+From the graph, there might be a positive relationship between K and P, however the high value of correlation 0.74 is due to the type of crops, especially the crop types near 150 units of P.
 
-## 4.4 Boxplots
+## 5.4 Boxplots
 
-This section uses boxplot to simultaneously compare the 7 numerical variables among different crops stored within the vector, "label". Recall, the 7 numerical variables are:
-
-```{r}
-names(crop2[1:7])
-
-```
-
+This section uses boxplot to compare the type of crops and other predictor variables. 
 
 ```{r, fig.width = 8, fig.height=20}
 # set up data frame
+
+library(tidytext)
+
 
 df4.3 <- crop2 %>% 
   pivot_longer(c(1:7),
@@ -230,8 +252,9 @@ df4.3 <- crop2 %>%
                                                      "temperature",
                                                      "humidity",
                                                      "ph",
-                                                     "rainfall"))) 
-
+                                                     "rainfall")),
+         label = reorder_within(x = label, by = result, within = variables)) 
+  
 # plot boxplots
 
 ggplot(df4.3, aes(x = label, y = result, colour = label)) +
@@ -239,29 +262,30 @@ ggplot(df4.3, aes(x = label, y = result, colour = label)) +
   facet_wrap(~variables, scale = "free", ncol =1) +
   theme_bw() +
   theme(legend.position = "none",
-        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2))
-  
+        axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  scale_x_reordered()
+
 ```
 
+# 6 MODEL BUILDING
 
-# 5 Model Building 
+## 6.1 Variables Selection
 
-The purpose of modeling of this project is to build an effective predictive model to suggest the most appropriate crops to grow in a particular farm based on various parameter. 
+This section aimed to select relevant and confounding variables for model building. 
 
-## 5.1 Variables Selection
-
-This section aims to select relevant and confounding variables during model building. According to the purpose of this project all of these variables are agricultural-wise important and relevant in determining the type of crops to grow in a particular farm.
+According to the purpose of this project, all of these variables are agricultural-wise important and are critical in determining the type of crops to grow in a particular farm.
 
 ```{r}
+
 head(crop2)
 
 ```
 
-Therefore, I will keep all of these variables.
+Therefore, I will keep all variables.
 
-## 5.2 Train-Test Split
+## 6.2 Train-Test Split
 
-The column "label" is what we are going to predict. It is a classification problem. 
+The column "label" is what we are going to predict, which is the types/classes of crops. 
 
 ```{r}
 set.seed(123)
@@ -278,7 +302,11 @@ test.data <- crop2[-training.set, ]
 
 ```
 
-## 5.3 Model - Discriminant Analysis  
+## 6.3 Model 
+
+In this section, I will build and explore the appropriate machine learning models for farmers to make prediction.
+
+### 6.3.1 Discriminant Analysis  
 
 5 methods of Discriminant Analysis are carried out, they are linear, quadratic, mixture, flexible and regularised discriminant analysis. 
 
@@ -292,29 +320,24 @@ preprocess_parameter <- train.data %>% preProcess(method = c("center", "scale"))
 train.transformed <- preprocess_parameter %>% predict(train.data)
 test.transformed <- preprocess_parameter %>% predict(test.data)
 
-```
+# build discriminant models
 
-
-```{r}
-# build lda model
 model_lda <- lda(label ~., data = train.transformed)
 model_qda <- qda(label ~., data = train.transformed)
 model_mda <- mda::mda(label ~., data = train.transformed)
 model_fda <- mda::fda(label ~., data = train.transformed)
 model_rda <- klaR::rda(label ~., data = train.transformed)
 
-```
+# predictions based on test data
 
-```{r}
 predict_lda <- model_lda %>% predict(test.transformed)
 predict_qda <- model_qda %>% predict(test.transformed)
 predict_mda <- model_mda %>% predict(test.transformed)
 predict_fda <- model_fda %>% predict(test.transformed)
 predict_rda <- model_rda %>% predict(test.transformed)
 
-```
+# putting the results together
 
-```{r}
 data.frame(
 lda_accuracy = mean(predict_lda$class == test.transformed$label),
 qda_accuracy = mean(predict_qda$class == test.transformed$label),
@@ -325,56 +348,42 @@ rda_accuracy = mean(predict_rda$class == test.transformed$label)
 
 ```
 
+
+
 All 5 methods of discriminant models produce great accuracy results.
 
-To be conservative, flexible discriminant analysis (fda) would be selected as the best model as it do not assume normality of data and equal variances among classes, and it has an accuracy of 97%.
+To be conservative, flexible discriminant analysis (FDA) would be selected as the best model, if it outcompete other models that I build later section. It is because FDA does not assume normality of data and equal variances among classes, and it has also an exellent level of accuracy at 97%.
 
-QDA suitable to large data set and RDA is commonly used for large multivariate dataset with the present of multicollinearity. The LDA is known for its restriction with assumptions in the normality of data and equal variance among classes, whereas MDA is slightly less restrictive model compared to LDA. 
+QDA is suitable to large data set and RDA is commonly used for large multivariate dataset (especially when predictor > sample size) with the present of multicollinearity. The LDA is known for its strict restriction with assumptions of data normality and equal variances among classes, whereas MDA is slightly less restrictive model compared to LDA. 
 
 
-
-## 5.4 Model - Naive Bayes Classifier
-
-```{r, warning=FALSE}
-
-# build the model
-
-model_nb <- klaR::NaiveBayes(label ~., data = train.data)
-
-# predictions
-
-prediction_nb <- model_nb %>% predict(test.data) 
-
-# model accuracy
-
-mean(prediction_nb$class == test.data$label)
-
-```
-
+###  6.3.2 Naive Bayes Classifier
 
 ```{r, warning=FALSE}
 
-model_nbc <- train(label ~., data = train.data,
+model_nb <- train(label ~., data = train.data,
                    method = "nb",
                    trControl = trainControl("cv", number = 10))
 
 # predictions
 
-prediction_nbc <- model_nbc %>% predict(test.data)
+prediction_nb <- model_nb %>% predict(test.data)
 
 # model accuracy
 
-mean(prediction_nbc == test.data$label)
+mean(prediction_nb == test.data$label)
 
 
 ```
-## 5.5 Model - Suppor Vector Method (SVM)
 
-This model is sometimes referred as support vector regression (SVR). This method identify the optimal decision boundary when it seperates the points from different classe and then use the final drawn boundary for prediction.  
 
-I will perform 3 types of SVR here and examine which SVR model produces the best predictions based on test data set. The 3 SVR models are linear, non-linear (Radial Kernal), and non-linear (polynomial kernal). 
+### 6.3.3 Suppor Vector Method (SVM)
 
-### 5.5.1 Linear SVM
+This model is sometimes referred as support vector regression (SVR). This method identify the optimal decision boundary when it separates the points from different classes and then use the final drawn boundary for prediction.  
+
+I will perform 3 types of SVR here and examine which SVR model produces the best predictions based on test dataset. The 3 SVR models are linear, non-linear (Radial Kernal), and non-linear (polynomial kernal). 
+
+#### 6.3.3.1 Linear SVM
 
 Applying following codes from caret packages, it helps to determine the best Cost (C) which is the tuning parameter of SVM. The higher the c, the better the accuracy result of particular model. 
 
@@ -408,7 +417,7 @@ model_svml$bestTune
 
 ```
 
-### 5.5.2 Non-linear SVM (Radial)
+#### 6.3.3.2 Non-linear SVM (Radial)
 
 For non-linear SVM, I will use either radial kernal or polynomial kernal. The R package will find the best values for modelt 
 
@@ -440,10 +449,7 @@ model_svmR$bestTune
 ```
 
 
-
-
-
-### 5.5.3 Non-linear (Polynomial)
+#### 6.3.3.3 Non-linear (Polynomial)
 
 ```{r}
 # build the model
@@ -469,16 +475,9 @@ mean(prediction_poly == test.data$label)
 ```
 
 
-* Random forest (so we have a tree-based model to compare to our LM)
-  * Can use gradient boosted tree
-  * Support vector regression (classification)
-* tune models GridsearchCV
-* test ensembles
+### 6.3.4  KNN
 
-
-## 5.6 Model - KNN
-
-Applying the K-Nearest Neighbor with caret package that help to search for the optimal k number by argument tuneLength.
+Applying the K-Nearest Neighbor in this section. I will use caret package to help to search for the optimal k number by argument "tuneLength".
 
 ```{r}
 
@@ -497,7 +496,7 @@ plot(model_knn)
 
 ```
 
-K value (Neighbors) has a negative relationship with Accuracy. A k-value of 5 is seems to have the highest accuracy.
+K value (Neighbors) has a negative relationship with Accuracy. A k-value of 5 has the highest accuracy during cross-validation prediction.
 
 ```{r}
 
@@ -512,15 +511,11 @@ mean(prediction_knn == test.data$label)
 
 ```
 
-## 5.7 Model - Decision Tree
-
+### 6.3.5 Decision Tree
 
 
 ```{r}
-# packages
-
-library(rpart)
-
+# packages：rpart
 # build the model
 
 set.seed(123)
@@ -535,7 +530,7 @@ plot(model_tree)
 
 ```
 
-Complexity parameter (cp) at lower value produce the highest accuracy. R recommending a best cp of 0.0077 to have the highest accuracy rate.
+Complexity parameter (cp) at lower value produce the highest accuracy. R recommends a cp of 0.0077 to generate the highest accuracy rate.
 
 ```{r}
 model_tree$bestTune
@@ -561,17 +556,15 @@ mean(prediction_tree == test.data$label)
 
 ```
 
-## 5.8 Model - Random Forest
+### 6.3.6 Random Forest
 
-In previous decision tree which I grown a tree, and now I grow a forest. It means that I build multiple trees from the data set to achieve a better predictive performance. 
-
-I tune a couple of hyperparameters in the following codes. These tunings may help to avoid overfitting on noisy data set (P. Bruce and Bruce 2017). 
+I tune a couple of hyperparameters in the following codes. These tuning may help to avoid overfitting on noisy data set (P. Bruce and Bruce 2017). 
 
 ```{r}
 
 # build the model
 
-model_rf2 <- list()
+model_rf <- list()
 for (nodesize in c(1,2,4,8)){   
   set.seed(123)
   model <- train(label ~., data = train.data,
@@ -580,21 +573,18 @@ for (nodesize in c(1,2,4,8)){
                metric = "Accuracy",
                nodesize = nodesize)
   model.name <- toString(nodesize)
-  model_rf2[[model.name]] <- model
+  model_rf[[model.name]] <- model
 }
 
-model_rf <- model_rf2
-
-# compare results
+# Results comparison
 
 resamples(model_rf) %>% summary(metric = "Accuracy")
 
-
 ```
 
-4 different nodesize (1, 2, 4, 8) produced a 99% of accuracy. Nodesize is the minimum of terminal nodes. The differences in term of accuracy between nodesize were really small, node 8 has the highest median accuracy of 99.7% base on cross validations. 
+4 different nodesize (1, 2, 4, 8) produced 99% of accuracy. Nodesize is the minimum of terminal nodes. The differences in term of accuracy between nodesize were really small, node 8 has the highest median accuracy of 99.7% base on cross validations. 
 
-I will pick nodesize at 8 to be the most appropriate nodesize for this random forest modeling.
+I will pick nodesize of 8 to be the most appropriate nodesize for this random forest model.
 
 Following statistics of the final model of this random forest computation indicating that:
 
@@ -602,10 +592,6 @@ Following statistics of the final model of this random forest computation indica
 * The optimal number of variables randomly sampled at each split is 2, known as mtry and bootstrap sampling. The optimal value is selected by *caret* automation.    
 * OBB rate is extremely small at only 0.51%.  
 
-```{r}
-model_rf$`8`$finalModel
-
-```
 
 **Variable importance** 
 
@@ -624,76 +610,304 @@ varImpPlot(model_rf$`8`$finalModel)
 
 ```
 
+"MeanDecreaseGini" represents the average decrease in node impurity by the variable. If rainfall and humidity are excluded from the model, large impurity will occur and affect the prediction accuracy. 
+
 ```{r}
 
 # prediction
 
-prediction_rf2 <- model_rf2 %>% predict(test.data)
+prediction_rf <- model_rf %>% predict(test.data)
 
 # accuracy
 
-mean(prediction_rf2$`8` == test.data$label)
+mean(prediction_rf$`8` == test.data$label)
 
 
 ```
-This tuned random forest model has 99.1% accuracy and is slightly lower than its untuned verson computed previous at 99.3%.
+This tuned random forest model has 99.1% accuracy.
 
-**variable important**
+
+### 6.3.7 Gradient Boosted Random Forest
 
 ```{r}
-library(randomForest)
-importance(model_rf2$`8`$finalModel)
+model_brf <- train(label ~., data = train.data,
+                   method = "xgbTree",
+                   trControl = trainControl("cv", number = 10))
+
+# prediction
+
+prediction_brf <- model_brf %>% predict(test.data)
+
+# accuracy
+
+mean(prediction_brf == test.data$label)
+
 
 ```
 
+## 6.4 Accuracy Comparison
 
-
-
-
-
-
-
-```{r}
+```{r, fig.width=10}
 
 # df
 
 p.summary <- data.frame(
-LDA = mean(predict_lda$class == test.transformed$label),
-QDA = mean(predict_qda$class == test.transformed$label),
-MDA = mean(predict_mda == test.transformed$label),
-FDA = mean(predict_fda == test.transformed$label),
-RDA = mean(predict_rda$class == test.transformed$label),
-NaiveBayer = mean(prediction_nb$class == test.data$label),
-SVM_linear = mean(predictions_svml == test.data$label),
-SVM_svmR = mean(prediction_svmR == test.data$label),
-SVM_Poly = mean(prediction_poly == test.data$label),
-knn = mean(prediction_knn == test.data$label),
-decision_tree = mean(prediction_tree == test.data$label),
-RandomForest = mean(prediction_rf == test.data$label),
-RandomForest_tuned = mean(prediction_rf2$`8` == test.data$label)
+  LDA = mean(predict_lda$class == test.transformed$label),
+  QDA = mean(predict_qda$class == test.transformed$label),
+  MDA = mean(predict_mda == test.transformed$label),
+  FDA = mean(predict_fda == test.transformed$label),
+  RDA = mean(predict_rda$class == test.transformed$label),
+  NaiveBayer = mean(prediction_nb == test.data$label),
+  SVM_linear = mean(predictions_svml == test.data$label),
+  SVM_svmR = mean(prediction_svmR == test.data$label),
+  SVM_Poly = mean(prediction_poly == test.data$label),
+  knn = mean(prediction_knn == test.data$label),
+  decision_tree = mean(prediction_tree == test.data$label),
+  RandomForest = mean(prediction_rf$`8` == test.data$label),
+  RandomForest_Boosted = mean(prediction_brf == test.data$label)
 )
 
 # pivot longer
 
-p.summary %>% 
+models_accuracy <- p.summary %>% 
   pivot_longer(c(1:13),
                names_to = "Model",
                values_to = "Accuracy") %>% 
-  mutate(Accuracy = round(Accuracy*100, 1)) %>% 
-  arrange(desc(Accuracy)) %>% 
-  mutate(Accuracy = paste0(Accuracy, "%"))
+  mutate(Accuracy = round(Accuracy*100, 2)) %>% 
+  arrange(desc(Accuracy)) 
 
+
+# plot
+
+ggplot(models_accuracy, aes(x = reorder(Model, -Accuracy), 
+                            y = Accuracy, fill = Model)) +
+  geom_bar(stat = "identity", width = 0.8) +
+  theme_classic() +
+  theme(legend.position = "none",
+        plot.title = element_text(face = "bold"),
+        axis.text.x = element_text(angle = 20, vjust = 0.85)) +
+  geom_text(aes(label = Accuracy), vjust = 1.5) +
+  labs(x = "Model",
+       y = "Accuracy, %",
+       title = "Model Accuracy in Predicting the Test Dataset") 
+  
+
+```
+
+NaiveBayer is ranked the best model in predicting the type of crops.
+
+## 6.5 Confusion Matrix 
+
+Picking the best model, Naive Bayers classifier, to be evaluated in terms of sensitivity and specificity. This model will be used for production in the next section if these matrices are good.
+
+*Naive Bayers Classifier*
+
+This model has both sensitivity and specificity above 0.9 for all crops, which is excellent. 
+
+```{r}
+# Confusion Matrix (predicted classes, observed classes)
+
+nb_cm <- confusionMatrix(prediction_nb, test.data$label)
+nb_cm_metrics <- nb_cm$byClass
+
+# cleaning
+
+df6.5 <- nb_cm_metrics %>% 
+  data.frame(nb_cm_metrics) %>% 
+  mutate(class = row.names(nb_cm_metrics),
+         class = str_replace_all(class, "Class: ", " ")) %>% 
+  relocate(class, .before = Sensitivity) %>% 
+  mutate(class = factor(class))
+
+row.names(df6.5) <- NULL
+
+# manipulation
+
+df6.5 <- df6.5 %>% 
+  pivot_longer(c("Sensitivity", "Specificity"),
+               names_to = "metrics",
+               values_to = "Results")
+
+# plot
+
+ggplot(df6.5, aes(y = Results, x = metrics, colour = class)) +
+  geom_jitter(size = 4, alpha = 0.5) +
+  scale_y_continuous(lim = c(0, 1), breaks = seq(0, 1, 0.2)) +
+  facet_wrap(~metrics, scale = "free_x") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold"),
+        strip.text = element_text(size = 12),
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
+  labs(x = " ",
+       title = "ML Model: Naive Bayers Classifier")
+  
+
+```
+Therefore, in terms of sensitivity and specificity, this model is considered safe to be used for production.
+
+
+# 8 MODEL FOR PRODUCTION  
+  
+This section will put the best models, **Naive Bayers classifier**, into production by creating a user API app to aid easy prediction of any given values.  
+  
+Suppose that I received two fictional requests from 2 clients in two different farms, they are both asking what best to crop on their land, and I have been given their environmental conditions:  
+
+```{r}
+
+# new data
+
+Variables <- c("N", "P", "K", "temperature", "humidity", "pH", "rainfall")
+Client_Jenny <- c(100, 50, 50, 30, 80, 6, 100)
+Client_Mike <- c(90, 20, 40, 20, 80, 5, 80)
+
+# df
+
+data.frame(Variables, Client_Jenny, Client_Mike) %>% 
+  kbl(align = "c",
+      table.attr = "style = 'width:40%;'"
+      ) %>% 
+  kable_styling(bootstrap_options = c("hover", "stripped", "bordered"))
+
+```
+
+There are 3 different ways to put this prediction into work.
+
+## 8.1 Direct Model Prediction
+
+It is a wonderful traditional way, though it is a bit tedious. This method works best for predicting large request (large dataset).
+
+Following codes convert clients request into data frames. 
+
+```{r}
+# convert client data into data frame
+
+Jenny <- data.frame(N = 100, 
+                           P = 50,
+                           K = 50,
+                           temperature = 30,
+                           humidity = 80,
+                           ph = 6, 
+                           rainfall = 100)
+
+
+Mike <- data.frame(N = 90, 
+                          P = 20,
+                          K = 40,
+                          temperature = 20,
+                          humidity = 80,
+                          ph = 5, 
+                          rainfall = 80)
 
 ```
 
 
+* Naive Bayes Classifier recommends **Banana** to be the best crop to grow for Jenny. 
+```{r, warning=FALSE}
 
-# 6 Model for Production
+# Prediction by Naive Bayes Classifier (nb) 
+
+model_nb %>% predict(Jenny)
+
+```
+
+* Naive Bayes Classifier recommends **rice** to be the best crop to grow for Mike.   
+
+```{r, warning=FALSE}
+
+# Prediction by Naive Bayes Classifier (nb) and Boosted Random Forest (brf)
+
+model_nb %>% predict(Mike) 
+
+```
+
+## 8.2 Functionise the model
+
+Alternatively I can build a Naive Bayes Classifier function for this crop classification project. 
+
+```{r}
+# Create the function of naive bayes
+
+crop_nb <- function(N, P, K, temperature, humidity, ph, rainfall){
+  
+  to_predict <- data_frame(N = as.numeric(N),
+                           P = as.numeric(P),
+                           K = as.numeric(K),
+                           temperature = as.numeric(temperature),
+                           humidity = as.numeric(humidity),
+                           ph = as.numeric(ph),
+                           rainfall = as.numeric(rainfall))
+  
+  model_nb %>% predict(to_predict)
+  
+}
+
+```
+
+* Making the prediction for Jenny using the *crop_nb* function. 
+
+```{r}
+Jenny
+```
+
+```{r, warning=FALSE}
+crop_nb(100, 50, 50, 30, 80, 6, 100)
+
+```
+* Making the prediction for Mike using the *crop_nb* function.
+
+```{r}
+Mike
+```
+```{r, warning=FALSE}
+crop_nb(90, 20, 40, 20, 80, 5, 80)
+
+```
+
+## 8.3 API App with Plumber
+
+This app allows me to freely make crop recommendation for any request without much coding works. Find the codes of this app in my github repo with the R file name - **plumber.R**
+
+**Prediction for Jenny**
+
+```{r}
+Jenny
+```
+
+![](C:\Users\karho\Desktop\R\github\crop\pic1_api1.JPG)
+
+![](C:\Users\karho\Desktop\R\github\crop\pic1_api2.JPG)
+
+
+* Banana is recommended the best crop for Jenny.
+
+**Prediction for Mike**
+
+```{r}
+Mike
+```
+![](C:\Users\karho\Desktop\R\github\crop\pic3_api3.JPG)
+
+![](C:\Users\karho\Desktop\R\github\crop\pic3_api4.JPG)
+
+
+```{r}
+test.data
+```
+* Rice is recommended the best crop for Mike.
+
+
+# 9 CONCLUSION
+
+In conclusion, 13 machine learning models were built, trained, and compared to each other in term of accurcy. The best model was Naive Bayers classifier in predicting the test dataset with an accuracy level of 99.55%. Confusion matrix was used to examin the sensitivity and specificity of this model, and both metrics were at an excellent levels of above 90%.
+
+This model was then used for recommending the suitable crop to grow for Jenny and Mike. The Naive Bayes model recommends Banana for Jenny and Rice for Mike. 
 
 
 
+# 10 CREDIT AND ACKNOWLEDGEMENT
 
-# Conclusion
+Specially thanks for *Atharva Ingle* for providing this dataset for Kaggle users to carry out machine learning analysis. The dataset website is again at [Kaggle.com](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset). 
 
 
 
