@@ -1,4 +1,4 @@
-# Agriculture Machine Learning
+# Recommendation of Crop Classes by Predictive Model
 
 *EDA + ML (Classification) + API app*
 
