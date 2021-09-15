@@ -14,11 +14,8 @@ This project builds an ML API that recommends crop classes with 99.5% accuracy. 
 
 ![](https://raw.githubusercontent.com/KAR-NG/crop/master/pic5_combine.JPG)
 
----
 
-
-
-## Resources 
+*Resources*
 
 https://www.kaggle.com/atharvaingle/crop-recommendation-dataset
 
