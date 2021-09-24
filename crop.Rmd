@@ -1,4 +1,5 @@
 ---
+
 title: "Recommendation of Crop Classes by Predictive Model"
 author: "Kar Ng"
 date: "2021"
@@ -20,6 +21,7 @@ always_allow_html: yes
 bytes <- file.size("crop.Rmd")
 words <- bytes/10
 minutes <- words/200
+
 ```
 
 Reading time: `r round(minutes)` minutes
@@ -40,7 +42,6 @@ Machine learning techniques were applied in this project and 13 models were buil
 
 
 
-
 # 2 R PACKAGES
 
 ```{r, message=FALSE, warning=FALSE}
@@ -54,6 +55,7 @@ library(MASS)
 library(randomForest)
 library(xgboost)
 library(rpart)
+library(doParallel)
 
 ```
 
@@ -62,6 +64,7 @@ library(rpart)
 
 This project uses a public dataset in kaggle.com [Link](https://www.kaggle.com/atharvaingle/crop-recommendation-dataset), called "Crop Recommendation Dataset" by *Artharva Ingle*. 
 
+
 ## 4.1 Data import
 
 ```{r}
@@ -69,7 +72,6 @@ crop <- read.csv("Crop_recom.csv",
                  fileEncoding = "UTF-8-BOM")
 
 ```
-
 
 The dataset has following descriptions, adapted from the *Kaggle* website. 
 
@@ -561,8 +563,14 @@ mean(prediction_tree == test.data$label)
 I tune a couple of hyperparameters in the following codes. These tuning may help to avoid overfitting on noisy data set (P. Bruce and Bruce 2017). 
 
 ```{r}
+# Parallel computing
+
+Cl <- makePSOCKcluster(5)
+registerDoParallel(Cl)
 
 # build the model
+
+start.time <- proc.time()
 
 model_rf <- list()
 for (nodesize in c(1,2,4,8)){   
@@ -575,6 +583,12 @@ for (nodesize in c(1,2,4,8)){
   model.name <- toString(nodesize)
   model_rf[[model.name]] <- model
 }
+
+stop.time <- proc.time()
+run.time <- start.time - stop.time
+print(run.time)
+
+stopCluster(Cl)
 
 # Results comparison
 
@@ -630,9 +644,24 @@ This tuned random forest model has 99.1% accuracy.
 ### 6.3.7 Gradient Boosted Random Forest
 
 ```{r}
+## parallel computing
+
+Cl <- makePSOCKcluster(5)
+registerDoParallel(Cl)
+
+## 
+
+start.time <- proc.time()
+
 model_brf <- train(label ~., data = train.data,
                    method = "xgbTree",
                    trControl = trainControl("cv", number = 10))
+
+stop.time <- proc.time()
+run.time <- stop.time - run.time
+print(run.time)
+
+stopCluster(Cl)
 
 # prediction
 
@@ -737,7 +766,7 @@ ggplot(df6.5, aes(y = Results, x = metrics, colour = class)) +
   theme_bw() +
   theme(plot.title = element_text(face = "bold"),
         strip.text = element_text(size = 12),
-        axis.ticks.x = element_blank(),
+        axis.ticks.x = element_blank(),  
         axis.text.x = element_blank()) +
   labs(x = " ",
        title = "ML Model: Naive Bayers Classifier")

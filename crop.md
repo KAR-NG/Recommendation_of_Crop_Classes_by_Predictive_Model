@@ -1,7 +1,3 @@
-Recommendation of Crop Classes by Predictive Model
-================
-Kar Ng
-2021
 
 -   [1. SUMMARY](#1-summary)
 -   [2 R PACKAGES](#2-r-packages)
@@ -38,11 +34,19 @@ Kar Ng
 
 ------------------------------------------------------------------------
 
+title: “Recommendation of Crop Classes by Predictive Model” author: “Kar
+Ng” date: “2021” output: github\_document: toc: true toc\_depth: 3
+always\_allow\_html: yes
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
 ![](https://github.com/KAR-NG/crop/blob/master/pic6_thumbnail.jpg)
 
 ------------------------------------------------------------------------
 
-Reading time: 13 minutes
+Reading time: 14 minutes
 
 # 1. SUMMARY
 
@@ -82,6 +86,7 @@ library(MASS)
 library(randomForest)
 library(xgboost)
 library(rpart)
+library(doParallel)
 ```
 
 # 4 DATA IMPORT AND CLEANING
@@ -1170,7 +1175,14 @@ may help to avoid overfitting on noisy data set (P. Bruce and Bruce
 2017).
 
 ``` r
+# Parallel computing
+
+Cl <- makePSOCKcluster(5)
+registerDoParallel(Cl)
+
 # build the model
+
+start.time <- proc.time()
 
 model_rf <- list()
 for (nodesize in c(1,2,4,8)){   
@@ -1183,6 +1195,17 @@ for (nodesize in c(1,2,4,8)){
   model.name <- toString(nodesize)
   model_rf[[model.name]] <- model
 }
+
+stop.time <- proc.time()
+run.time <- start.time - stop.time
+print(run.time)
+```
+
+    ##    user  system elapsed 
+    ##   -6.84   -0.11  -41.34
+
+``` r
+stopCluster(Cl)
 
 # Results comparison
 
@@ -1268,9 +1291,29 @@ This tuned random forest model has 99.1% accuracy.
 ### 6.3.7 Gradient Boosted Random Forest
 
 ``` r
+## parallel computing
+
+Cl <- makePSOCKcluster(5)
+registerDoParallel(Cl)
+
+## 
+
+start.time <- proc.time()
+
 model_brf <- train(label ~., data = train.data,
                    method = "xgbTree",
                    trControl = trainControl("cv", number = 10))
+
+stop.time <- proc.time()
+run.time <- stop.time - run.time
+print(run.time)
+```
+
+    ##    user  system elapsed 
+    ##  754.60    4.46 1164.55
+
+``` r
+stopCluster(Cl)
 
 # prediction
 
@@ -1377,7 +1420,7 @@ ggplot(df6.5, aes(y = Results, x = metrics, colour = class)) +
   theme_bw() +
   theme(plot.title = element_text(face = "bold"),
         strip.text = element_text(size = 12),
-        axis.ticks.x = element_blank(),
+        axis.ticks.x = element_blank(),  
         axis.text.x = element_blank()) +
   labs(x = " ",
        title = "ML Model: Naive Bayers Classifier")
